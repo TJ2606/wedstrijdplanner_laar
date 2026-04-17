@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Speeltijdverdeler</title>
+    <style>
+        :root {
+            --groen-donker: #1b4332;
+            --groen-mid:    #2d6a4f;
+            --groen-licht:  #52b788;
+            --groen-bg:     #d8f3dc;
+            --geel:         #ffd60a;
+            --rood:         #e63946;
+            --grijs:        #6c757d;
+            --grijs-licht:  #f1f3f5;
+            --wit:          #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--groen-donker);
+            min-height: 100vh;
+            padding-bottom: 40px;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: var(--groen-mid);
+            padding: 18px 16px 14px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,.35);
+        }
+        .header h1 { font-size: 1.35rem; font-weight: 800; color: #fff; letter-spacing: -.3px; }
+        .header p  { font-size: .82rem; color: rgba(255,255,255,.75); margin-top: 3px; }
+
+        /* ── Voortgangsbalk ── */
+        .progress-wrap {
+            background: var(--groen-mid);
+            padding: 10px 16px 14px;
+            display: flex;
+            gap: 6px;
+        }
+        .p-step {
+            flex: 1; height: 5px; border-radius: 3px;
+            background: rgba(255,255,255,.2);
+            transition: background .3s;
+        }
+        .p-step.actief { background: var(--geel); }
+        .p-step.klaar  { background: var(--groen-licht); }
+
+        /* ── Kaart ── */
+        .kaart {
+            background: var(--wit);
+            color: #222;
+            border-radius: 18px;
+            margin: 14px 14px 0;
+            padding: 22px 18px 24px;
+            box-shadow: 0 4px 18px rgba(0,0,0,.22);
+        }
+        .stap-label {
+            font-size: .7rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1.2px;
+            color: var(--groen-mid); margin-bottom: 5px;
+        }
+        .kaart h2 { font-size: 1.15rem; font-weight: 800; color: #111; margin-bottom: 5px; }
+        .kaart > p { font-size: .88rem; color: var(--grijs); line-height: 1.55; margin-bottom: 18px; }
+
+        /* ── Invoerveld ── */
+        .invoer-wrap { position: relative; }
+        .invoer-wrap input { padding-right: 58px; }
+        .suffix {
+            position: absolute; right: 14px; top: 50%;
+            transform: translateY(-50%);
+            color: var(--grijs); font-size: .88rem; pointer-events: none;
+        }
+        input[type="number"], input[type="text"] {
+            width: 100%; padding: 13px 15px;
+            border: 2px solid #dde; border-radius: 11px;
+            font-size: 1rem; outline: none;
+            background: var(--grijs-licht);
+            transition: border-color .2s, background .2s;
+        }
+        input:focus { border-color: var(--groen-mid); background: #fff; }
+
+        /* ── Info-blok ── */
+        .info-blok {
+            background: var(--groen-bg); border-left: 4px solid var(--groen-mid);
+            border-radius: 8px; padding: 11px 13px; margin-top: 10px; display: none;
+        }
+        .info-blok p { font-size: .82rem; color: var(--groen-donker); }
+
+        /* ── Foutmelding ── */
+        .fout { color: var(--rood); font-size: .82rem; margin-top: 7px; min-height: 18px; }
+
+        /* ── Knoppen ── */
+        .btn {
+            display: block; width: 100%; padding: 15px;
+            border: none; border-radius: 13px;
+            font-size: .97rem; font-weight: 700;
+            cursor: pointer; transition: opacity .15s, transform .1s;
+        }
+        .btn:active { transform: scale(.98); }
+        .btn-primair  { background: var(--groen-mid); color: #fff; margin-top: 18px; }
+        .btn-primair:hover { background: var(--groen-donker); }
+        .btn-secundair { background: var(--grijs-licht); color: #333; margin-top: 9px; }
+        .btn-toevoegen {
+            width: 100%; padding: 12px;
+            background: none; border: 2px dashed var(--groen-licht);
+            border-radius: 11px; color: var(--groen-mid);
+            font-size: .9rem; font-weight: 700; cursor: pointer; margin-top: 8px;
+        }
+
+        /* ── Spelerslijst ── */
+        .speler-lijst { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+        .speler-rij   { display: flex; align-items: center; gap: 9px; }
+        .speler-nr {
+            width: 28px; height: 28px; flex-shrink: 0;
+            background: var(--groen-mid); color: #fff;
+            border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-size: .75rem; font-weight: 800;
+        }
+        .speler-rij input { flex: 1; }
+        .btn-verwijder {
+            background: none; border: none; color: var(--rood);
+            font-size: 1.4rem; line-height: 1; cursor: pointer;
+            padding: 2px 7px; flex-shrink: 0;
+        }
+
+        /* ── Keuzekaartjes (radio) ── */
+        .optie-groep { display: flex; flex-direction: column; gap: 9px; }
+        .optie-kaart {
+            border: 2px solid #dde; border-radius: 12px;
+            padding: 13px 15px; cursor: pointer;
+            display: flex; align-items: center; gap: 12px;
+            transition: border-color .2s, background .2s;
+        }
+        .optie-kaart:hover  { border-color: var(--groen-licht); }
+        .optie-kaart.gekozen { border-color: var(--groen-mid); background: #eaf5ee; }
+        .optie-kaart input[type="radio"] { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--groen-mid); }
+        .optie-tekst { flex: 1; }
+        .optie-tekst strong { display: block; font-size: .93rem; }
+        .optie-tekst span   { font-size: .78rem; color: var(--grijs); }
+
+        /* ── Keeperselectie per periode ── */
+        .periode-sectie { margin-bottom: 18px; }
+        .periode-titel {
+            font-size: .78rem; font-weight: 800;
+            color: var(--groen-mid); text-transform: uppercase;
+            letter-spacing: .6px; margin-bottom: 8px;
+        }
+        .keeper-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+        .keeper-knop {
+            padding: 10px 8px; border: 2px solid #dde;
+            border-radius: 9px; background: #fff;
+            font-size: .82rem; font-weight: 700; cursor: pointer;
+            text-align: center; transition: all .18s;
+        }
+        .keeper-knop.gekozen { background: var(--groen-mid); color: #fff; border-color: var(--groen-mid); }
+
+        /* ── Formatknop-groep ── */
+        .format-groep { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+        .format-knop {
+            padding: 12px 6px; border: 2px solid #dde;
+            border-radius: 10px; background: #fff;
+            font-size: .88rem; font-weight: 700; cursor: pointer;
+            text-align: center; transition: all .18s;
+        }
+        .format-knop.gekozen { background: var(--groen-mid); color: #fff; border-color: var(--groen-mid); }
+        .format-sub { font-size: .68rem; font-weight: 400; display: block; margin-top: 2px; }
+
+        /* ── Schema output ── */
+        .schema-periode {
+            border: 1.5px solid #e0e4e8; border-radius: 13px;
+            margin-bottom: 11px; overflow: hidden;
+        }
+        .schema-kop {
+            background: var(--groen-mid); color: #fff;
+            padding: 10px 14px;
+            display: flex; justify-content: space-between; align-items: center;
+            font-weight: 800; font-size: .88rem;
+        }
+        .schema-body { padding: 13px 14px; display: flex; flex-direction: column; gap: 9px; }
+        .schema-sectie-label {
+            font-size: .68rem; font-weight: 800;
+            text-transform: uppercase; letter-spacing: .8px;
+            color: var(--grijs); margin-bottom: 4px;
+        }
+        .tag-rij { display: flex; flex-wrap: wrap; gap: 5px; }
+        .tag {
+            padding: 4px 10px; border-radius: 20px;
+            font-size: .78rem; font-weight: 700;
+        }
+        .tag-keeper { background: var(--geel); color: #333; }
+        .tag-veld   { background: #d8f3dc; color: var(--groen-donker); }
+        .tag-bank   { background: #eee; color: var(--grijs); }
+
+        /* ── Tijdbalk ── */
+        .tijden-sectie { margin-top: 18px; }
+        .tijden-label  { font-size: .88rem; font-weight: 800; color: #222; margin-bottom: 11px; }
+        .tijdbalk-rij  { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
+        .tijdbalk-naam { width: 90px; font-size: .82rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tijdbalk-bg   { flex: 1; height: 18px; background: #e6eaf0; border-radius: 9px; overflow: hidden; }
+        .tijdbalk-vul  { height: 100%; border-radius: 9px; transition: width .5s; }
+        .tijdbalk-min  { width: 34px; text-align: right; font-size: .75rem; color: var(--grijs); }
+
+        /* ── Gestapelde balk ── */
+        .tijdbalk-stack { display: flex; height: 100%; border-radius: 9px; overflow: hidden; }
+        .tb-veld   { background: var(--groen-mid); height: 100%; }
+        .tb-keeper { background: #e9c46a; height: 100%; }
+
+        /* ── Sub-periode binnen keeper-periode ── */
+        .sub-tijd-header {
+            font-size: .72rem; font-weight: 800;
+            color: var(--grijs); letter-spacing: .6px;
+            padding: 8px 14px 2px;
+            text-transform: uppercase;
+        }
+
+        /* ── Wissel-indicatie ── */
+        .wissel-lijn {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 14px; flex-wrap: wrap;
+            background: #fff8e1;
+            border-top: 1px dashed #fce4a8;
+            border-bottom: 1px dashed #fce4a8;
+        }
+        .wissel-badge-line {
+            font-size: .72rem; font-weight: 800;
+            background: var(--geel); color: #333;
+            padding: 2px 8px; border-radius: 5px;
+            white-space: nowrap;
+        }
+        .wissel-spelers { display: flex; flex-wrap: wrap; gap: 6px; }
+        .wissel-in  { font-size: .78rem; font-weight: 700; color: var(--groen-mid); }
+        .wissel-uit { font-size: .78rem; font-weight: 700; color: var(--rood); }
+
+        /* ── Achterstand invoer ── */
+        .ach-wrap  { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+        .ach-inp   {
+            width: 46px; padding: 10px 5px; text-align: center;
+            border: 2px solid #dde; border-radius: 9px;
+            font-size: .82rem; background: #fffbe6;
+            outline: none; transition: border-color .2s;
+        }
+        .ach-inp:focus { border-color: var(--geel); background: #fff; }
+        .ach-hint  { font-size: .65rem; color: var(--grijs); line-height: 1.2; text-align: center; width: 24px; }
+
+        /* ── Wisselinterval sectie ── */
+        .wis-sectie { margin-top: 18px; padding-top: 16px; border-top: 1px solid #eee; }
+        .wis-label  { font-size: .78rem; font-weight: 800; color: var(--groen-mid);
+                      text-transform: uppercase; letter-spacing: .8px; margin-bottom: 5px; }
+
+        /* ── Legenda ── */
+        .legenda { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* ── Stap tonen/verbergen ── */
+        .stap { display: none; }
+        .stap.actief { display: block; }
+
+        /* ── Wisselmoment badge ── */
+        .wissel-badge {
+            display: inline-block;
+            background: var(--geel); color: #333;
+            border-radius: 6px; padding: 2px 8px;
+            font-size: .75rem; font-weight: 800;
+            margin-left: 8px;
+        }
+
+        /* ════════════════════════════════════
+           SEIZOEN / TAB / PERSISTENTIE
+        ════════════════════════════════════ */
+        body { padding-bottom: 70px; }
+
+        /* Tab bar */
+        #tabBar {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 480px;
+            display: flex; background: var(--groen-donker);
+            border-top: 2px solid rgba(255,255,255,.12);
+            z-index: 100;
+        }
+        .tab-knop {
+            flex: 1; padding: 11px 8px 13px;
+            background: none; border: none;
+            color: rgba(255,255,255,.45);
+            font-size: .82rem; font-weight: 700;
+            cursor: pointer; display: flex;
+            flex-direction: column; align-items: center; gap: 3px;
+            transition: color .2s; line-height: 1.2;
+        }
+        .tab-knop .tab-ico { font-size: 1.1rem; }
+        .tab-knop.actief { color: var(--geel); border-top: 2px solid var(--geel); margin-top: -2px; }
+
+        /* Seizoen scherm */
+        #seizoenScherm { display: none; }
+        #seizoenScherm.actief { display: block; }
+
+        /* Bottom sheet (opslaan) */
+        #opslaanOverlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.55); z-index: 200;
+        }
+        #opslaanSheet {
+            position: fixed; bottom: 0; left: 50%; transform: translate(-50%, 100%);
+            width: 100%; max-width: 480px;
+            background: #fff; border-radius: 18px 18px 0 0;
+            padding: 24px 20px 36px; z-index: 201;
+            transition: transform .3s cubic-bezier(.4,0,.2,1);
+            max-height: 85vh; overflow-y: auto;
+        }
+        #opslaanSheet.open { transform: translate(-50%, 0); }
+        #opslaanSheet h3 { font-size: 1.05rem; font-weight: 800; margin-bottom: 14px; color: #111; }
+        .sheet-label {
+            font-size: .72rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: .8px; color: var(--groen-mid); margin: 12px 0 4px;
+        }
+        .sheet-speler-rij {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 10px; border-radius: 9px; background: var(--grijs-licht);
+            margin-bottom: 6px; font-size: .88rem; font-weight: 600;
+        }
+        .sheet-speler-rij input[type="checkbox"] {
+            width: 20px; height: 20px; accent-color: var(--groen-mid); flex-shrink: 0;
+        }
+        .sheet-speler-naam { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sheet-keeper-badge {
+            font-size: .7rem; font-weight: 700;
+            background: #fff3cd; color: #856404;
+            border-radius: 5px; padding: 1px 5px; margin-left: 4px;
+            white-space: nowrap;
+        }
+        .sheet-min-wrap {
+            display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+        }
+        .sheet-min-inp {
+            width: 48px; padding: 5px 6px; text-align: center;
+            border: 2px solid #dde; border-radius: 8px;
+            font-size: .88rem; font-weight: 700;
+            background: #fff; outline: none;
+            transition: border-color .2s;
+        }
+        .sheet-min-inp:focus { border-color: var(--groen-mid); }
+        .sheet-min-inp:disabled { background: var(--grijs-licht); color: #bbb; border-color: #eee; }
+        .sheet-min-label { font-size: .72rem; color: var(--grijs); }
+        .opsl-bevestigd {
+            text-align: center; padding: 18px;
+            font-size: .95rem; font-weight: 700; color: var(--groen-mid);
+        }
+
+        /* Seizoen kaart layout */
+        .sz-sectie-titel {
+            font-size: .75rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: .9px; color: var(--groen-mid);
+            margin: 20px 0 10px;
+        }
+        .sz-rij {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+        }
+        .sz-naam {
+            width: 82px; font-size: .82rem; font-weight: 700;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .sz-balk-bg {
+            flex: 1; height: 20px; background: #e6eaf0; border-radius: 10px;
+            overflow: hidden; position: relative;
+        }
+        .sz-balk-veld   { height: 100%; background: var(--groen-mid); float: left; }
+        .sz-balk-keeper { height: 100%; background: #e9c46a; float: left; }
+        .sz-gem {
+            width: 42px; text-align: right;
+            font-size: .78rem; font-weight: 700; color: #333;
+        }
+        .sz-aanw { width: 28px; font-size: .68rem; color: var(--grijs); text-align: right; }
+
+        /* Wedstrijd history */
+        .wedstrijd-item {
+            border: 1.5px solid #e0e4e8; border-radius: 11px;
+            margin-bottom: 8px; overflow: hidden;
+        }
+        .wedstrijd-item summary {
+            padding: 11px 14px; font-size: .85rem; font-weight: 700;
+            cursor: pointer; list-style: none; display: flex;
+            justify-content: space-between; align-items: center;
+            background: var(--grijs-licht);
+        }
+        .wedstrijd-item summary::after { content: '›'; font-size: 1.1rem; color: var(--grijs); }
+        .wedstrijd-item[open] summary::after { content: '⌄'; }
+        .wedstrijd-detail {
+            padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 6px;
+        }
+        .wd-speler-tag {
+            padding: 4px 9px; border-radius: 18px;
+            background: #e8f5e9; color: var(--groen-donker);
+            font-size: .75rem; font-weight: 700;
+        }
+        .wd-speler-tag.keeper { background: #fff3cd; color: #856404; }
+        .btn-verwijder-wedstrijd {
+            background: none; border: none; color: var(--rood);
+            font-size: .78rem; font-weight: 700; cursor: pointer;
+            padding: 4px 8px; margin-left: auto;
+        }
+        .seizoen-leeg {
+            text-align: center; padding: 32px 16px;
+            color: var(--grijs); font-size: .9rem; line-height: 1.6;
+        }
+        .seizoen-leeg .leeg-ico { font-size: 2.5rem; margin-bottom: 10px; }
+        .btn-danger {
+            background: none; border: 2px solid var(--rood);
+            color: var(--rood); border-radius: 10px;
+            padding: 11px; font-size: .88rem; font-weight: 700;
+            width: 100%; cursor: pointer; margin-top: 16px;
+        }
+        .bevestiging-banner {
+            background: #d8f3dc; border-left: 4px solid var(--groen-mid);
+            border-radius: 8px; padding: 11px 14px; margin-top: 12px;
+            font-size: .85rem; font-weight: 700; color: var(--groen-donker);
+            display: none;
+        }
+
+        /* Opslaan-knop in resultaat */
+        .btn-opslaan {
+            background: var(--groen-donker); color: #fff;
+            margin-top: 10px; display: none;
+        }
+
+        /* Status badge */
+        .status-badge {
+            display: inline-block; padding: 2px 8px;
+            border-radius: 5px; font-size: .68rem; font-weight: 800;
+            text-transform: uppercase; letter-spacing: .4px; vertical-align: middle;
+        }
+        .status-gepland  { background: #fff3cd; color: #856404; }
+        .status-gespeeld { background: #d8f3dc; color: var(--groen-donker); }
+
+        /* Uitslag invoer */
+        .uitslag-wrap { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+        .uitslag-inp {
+            width: 58px; padding: 10px 6px; text-align: center;
+            border: 2px solid #dde; border-radius: 10px;
+            font-size: 1.25rem; font-weight: 800;
+            background: var(--grijs-licht); outline: none;
+            transition: border-color .2s;
+        }
+        .uitslag-inp:focus { border-color: var(--groen-mid); background: #fff; }
+        .uitslag-vs { font-size: 1.1rem; font-weight: 800; color: var(--grijs); }
+        .uitslag-team { font-size: .78rem; color: var(--grijs); flex: 1; }
+
+        /* Doelpunten teller */
+        .doel-rij {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 10px; border-radius: 9px; background: var(--grijs-licht);
+            margin-bottom: 5px;
+        }
+        .doel-naam { flex: 1; font-size: .88rem; font-weight: 600; }
+        .doel-teller { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .doel-btn {
+            width: 28px; height: 28px; border: none; border-radius: 7px;
+            font-size: 1rem; font-weight: 800; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .doel-btn-min  { background: #e0e0e0; color: #555; }
+        .doel-btn-plus { background: var(--groen-mid); color: #fff; }
+        .doel-num { width: 22px; text-align: center; font-size: 1rem; font-weight: 800; }
+
+        /* Invullen sheet */
+        #invullenOverlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.55); z-index: 202;
+        }
+        #invullenSheet {
+            position: fixed; bottom: 0; left: 50%; transform: translate(-50%, 100%);
+            width: 100%; max-width: 480px;
+            background: #fff; border-radius: 18px 18px 0 0;
+            padding: 24px 20px 36px; z-index: 203;
+            transition: transform .3s cubic-bezier(.4,0,.2,1);
+            max-height: 88vh; overflow-y: auto;
+        }
+        #invullenSheet.open { transform: translate(-50%, 0); }
+        #invullenSheet h3 { font-size: 1.05rem; font-weight: 800; margin-bottom: 14px; color: #111; }
+
+        /* PDF-knop */
+        .btn-pdf {
+            background: #fff; color: var(--groen-donker);
+            border: 2px solid var(--groen-donker);
+            margin-top: 10px;
+        }
+
+        /* ════════════════════════════════════
+           PRINT / PDF
+        ════════════════════════════════════ */
+        @media print {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+            body { background: #fff !important; padding: 0 !important; }
+
+            .header { background: var(--groen-mid) !important; padding: 12px 16px !important; }
+            .header h1 { font-size: 1.1rem !important; }
+
+            #progressWrap,
+            #tabBar,
+            .stap:not(#stapResultaat),
+            #seizoenScherm { display: none !important; }
+
+            #stapResultaat { display: block !important; }
+
+            .kaart {
+                box-shadow: none !important;
+                margin: 8px 8px 0 !important;
+                border: 1px solid #ddd !important;
+                border-radius: 10px !important;
+            }
+
+            .btn-primair,
+            .btn-secundair,
+            .btn-pdf,
+            .btn-opslaan { display: none !important; }
+
+            .schema-periode { break-inside: avoid; }
+
+            .tijden-sectie { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>⚽ Speeltijdverdeler</h1>
+    <p>Eerlijke verdeling voor elke speler</p>
+</div>
+
+<div id="schemaArea">
+<div class="progress-wrap" id="progressWrap">
+    <div class="p-step actief" data-s="1"></div>
+    <div class="p-step" data-s="2"></div>
+    <div class="p-step" data-s="3"></div>
+    <div class="p-step" data-s="4"></div>
+    <div class="p-step" data-s="5"></div>
+</div>
+
+<!-- ══════════════ STAP 1: Speeltijd ══════════════ -->
+<div class="stap actief" id="stap1">
+    <div class="kaart">
+        <div class="stap-label">Stap 1 van 5</div>
+        <h2>Wedstrijd plannen</h2>
+        <p>Vul de tegenstander en speelduur in.</p>
+
+        <input type="text" id="tegStanderStapInvoer" placeholder="Tegenstander (optioneel)"
+               style="margin-bottom:12px">
+
+        <div class="invoer-wrap">
+            <input type="number" id="speeltijdInvoer" placeholder="Speeltijd (bijv. 60)"
+                   min="10" max="120" inputmode="numeric">
+            <span class="suffix">min</span>
+        </div>
+
+        <div class="info-blok" id="speeltijdInfo">
+            <p id="speeltijdInfoTekst"></p>
+        </div>
+        <div class="fout" id="speeltijdFout"></div>
+
+        <button class="btn btn-primair" onclick="naarStap2()">Volgende →</button>
+    </div>
+</div>
+
+<!-- ══════════════ STAP 2: Spelersnamen ══════════════ -->
+<div class="stap" id="stap2">
+    <div class="kaart">
+        <div class="stap-label">Stap 2 van 5</div>
+        <h2>Spelers</h2>
+        <p>Voer de namen in van alle spelers die aanwezig zijn.</p>
+        <div class="speler-lijst" id="spelerLijst"></div>
+        <button class="btn-toevoegen" id="btnToevoegen" onclick="spelerToevoegen()">+ Speler toevoegen</button>
+
+        <div class="fout" id="spelersFout"></div>
+        <button class="btn btn-primair" onclick="naarStap3()">Volgende →</button>
+        <button class="btn btn-secundair" onclick="naarStap(1)">← Terug</button>
+    </div>
+</div>
+
+<!-- ══════════════ STAP 3: Speelformaat ══════════════ -->
+<div class="stap" id="stap3">
+    <div class="kaart">
+        <div class="stap-label">Stap 3 van 5</div>
+        <h2>Speelformaat</h2>
+        <p>Hoeveel spelers staan er tegelijk op het veld (inclusief keeper)?</p>
+
+        <div class="format-groep" id="formatGroep"></div>
+
+        <div class="info-blok" id="formatInfo" style="display:block; margin-top:12px;">
+            <p id="formatInfoTekst">Kies een formaat hierboven.</p>
+        </div>
+
+        <div class="wis-sectie">
+            <div class="wis-label">Wisselinterval</div>
+            <p style="font-size:.83rem;color:var(--grijs);margin-bottom:10px;line-height:1.5;">
+                Om de hoeveel minuten wil je wisselen? Laat leeg voor een automatisch voorstel.
+            </p>
+            <div class="invoer-wrap">
+                <input type="number" id="wisselIntervalInvoer" placeholder="auto"
+                       min="1" max="90" inputmode="numeric">
+                <span class="suffix">min</span>
+            </div>
+            <div class="info-blok" id="wisselInfo" style="margin-top:10px;">
+                <p id="wisselInfoTekst"></p>
+            </div>
+        </div>
+
+        <div class="fout" id="formatFout"></div>
+        <button class="btn btn-primair" onclick="naarStap4()">Volgende →</button>
+        <button class="btn btn-secundair" onclick="naarStap(2)">← Terug</button>
+    </div>
+</div>
+
+<!-- ══════════════ STAP 4: Keeper rotatie ══════════════ -->
+<div class="stap" id="stap4">
+    <div class="kaart">
+        <div class="stap-label">Stap 4 van 5</div>
+        <h2>Keeper rotatie</h2>
+        <p>Hoe lang speelt de keeper per beurt in het doel?</p>
+
+        <div class="optie-groep" id="keeperRotatieGroep">
+            <label class="optie-kaart" onclick="kiesKeepRotatie('heel')">
+                <input type="radio" name="keeperRotatie" value="heel">
+                <div class="optie-tekst">
+                    <strong>Hele wedstrijd</strong>
+                    <span id="optHeel">1 keeper speelt de volledige wedstrijd</span>
+                </div>
+            </label>
+            <label class="optie-kaart" onclick="kiesKeepRotatie('half')">
+                <input type="radio" name="keeperRotatie" value="half">
+                <div class="optie-tekst">
+                    <strong>Per helft</strong>
+                    <span id="optHalf">Keeper wisselt na de rust</span>
+                </div>
+            </label>
+            <label class="optie-kaart" onclick="kiesKeepRotatie('kwart')">
+                <input type="radio" name="keeperRotatie" value="kwart">
+                <div class="optie-tekst">
+                    <strong>Per kwart</strong>
+                    <span id="optKwart">Keeper wisselt elk kwartier</span>
+                </div>
+            </label>
+        </div>
+
+        <div class="fout" id="keeperRotatieFout"></div>
+        <button class="btn btn-primair" onclick="naarStap5()">Volgende →</button>
+        <button class="btn btn-secundair" onclick="naarStap(3)">← Terug</button>
+    </div>
+</div>
+
+<!-- ══════════════ STAP 5: Keeper selectie ══════════════ -->
+<div class="stap" id="stap5">
+    <div class="kaart">
+        <div class="stap-label">Stap 5 van 5</div>
+        <h2>Keepers selecteren</h2>
+        <p id="keeperSelectieUitleg">Selecteer voor elke periode wie er in het doel staat.</p>
+
+        <div id="keeperPeriodes"></div>
+
+        <div class="fout" id="keeperSelectieFout"></div>
+        <button class="btn btn-primair" onclick="genereerSchema()">Schema genereren →</button>
+        <button class="btn btn-secundair" onclick="naarStap(4)">← Terug</button>
+    </div>
+</div>
+
+<!-- ══════════════ RESULTAAT ══════════════ -->
+<div class="stap" id="stapResultaat">
+    <div class="kaart">
+        <div class="stap-label">Resultaat</div>
+        <h2>Speelschema</h2>
+        <p id="resultaatSub"></p>
+        <div id="schemaOutput"></div>
+        <button class="btn btn-primair" onclick="opnieuw()" style="margin-top:20px;">Nieuw schema</button>
+        <button class="btn btn-pdf" onclick="printSchema()">📄 Download als PDF</button>
+        <button class="btn btn-primair btn-opslaan" id="btnOpslaan" onclick="openOpslaanSheet()" style="display:none">💾 Opslaan in seizoen</button>
+    </div>
+</div>
+
+</div><!-- #schemaArea -->
+
+<!-- ══════════════ SEIZOEN SCHERM ══════════════ -->
+<div id="seizoenScherm">
+    <div class="kaart">
+        <div class="stap-label">Seizoensoverzicht</div>
+        <h2>Speeltijd dit seizoen</h2>
+        <p>Gemiddeld per bijgewoonde wedstrijd</p>
+        <div id="seizoenStats"></div>
+        <div class="sz-sectie-titel" id="wedstrijdTitel" style="display:none">Gespeelde wedstrijden</div>
+        <div id="wedstrijdLijst"></div>
+        <div id="seizoenLeeg" class="seizoen-leeg">
+            <div class="leeg-ico">📋</div>
+            <p>Nog geen wedstrijden opgeslagen.<br>Genereer een schema en sla het op via de ⚽ tab.</p>
+        </div>
+        <button class="btn btn-danger" id="btnSeizoenWissen" onclick="seizoenWissen()" style="display:none">Seizoen wissen</button>
+    </div>
+</div>
+
+<!-- ══════════════ TAB BAR ══════════════ -->
+<div id="tabBar">
+    <button class="tab-knop actief" id="tabSchemaKnop" onclick="toonTab('schema')">
+        <span class="tab-ico">⚽</span>Schema
+    </button>
+    <button class="tab-knop" id="tabSeizoenKnop" onclick="toonTab('seizoen')">
+        <span class="tab-ico">📊</span>Seizoen
+    </button>
+</div>
+
+<!-- ══════════════ OPSLAAN BOTTOM SHEET ══════════════ -->
+<div id="opslaanOverlay" onclick="sluitOpslaanSheet()"></div>
+<div id="opslaanSheet">
+    <h3>💾 Opslaan in seizoen</h3>
+    <div class="sheet-label">Tegenstander</div>
+    <input type="text" id="tegStanderInvoer" placeholder="bijv. FC Voorbeeld" style="margin-bottom:14px">
+    <div class="sheet-label">Verwachte speeltijd per speler</div>
+    <p style="font-size:.78rem;color:var(--grijs);margin-bottom:10px">Na de wedstrijd kun je de daadwerkelijke tijden, uitslag en doelpunten invullen via het seizoensoverzicht.</p>
+    <div id="opslaanSpelers"></div>
+    <button class="btn btn-primair" onclick="bevestigOpslaan()" style="margin-top:16px">Opslaan als plan</button>
+    <button class="btn btn-secundair" onclick="sluitOpslaanSheet()">Annuleren</button>
+</div>
+
+<!-- ══════════════ INVULLEN SHEET ══════════════ -->
+<div id="invullenOverlay" onclick="sluitInvullenSheet()"></div>
+<div id="invullenSheet">
+    <h3 id="invullenTitel">📝 Wedstrijd invullen</h3>
+    <div class="sheet-label">Uitslag</div>
+    <div class="uitslag-wrap">
+        <div style="text-align:center">
+            <div class="uitslag-team" style="margin-bottom:3px">Wij</div>
+            <input type="number" class="uitslag-inp" id="uitslagEigen" placeholder="0" min="0" inputmode="numeric">
+        </div>
+        <span class="uitslag-vs">–</span>
+        <div style="text-align:center">
+            <div class="uitslag-team" id="uitslagTegenNaam" style="margin-bottom:3px">Tegenstander</div>
+            <input type="number" class="uitslag-inp" id="uitslagTegen" placeholder="0" min="0" inputmode="numeric">
+        </div>
+    </div>
+    <div class="sheet-label" style="margin-top:16px">Doelpuntenmakers</div>
+    <div id="invullenDoelen"></div>
+    <div class="sheet-label" style="margin-top:16px">Gespeelde minuten</div>
+    <p style="font-size:.78rem;color:var(--grijs);margin-bottom:10px">Haal vinkje weg bij afwezige of geblesseerde spelers.</p>
+    <div id="invullenSpelers"></div>
+    <button class="btn btn-primair" onclick="slaInvullenOp()" style="margin-top:16px">Opslaan</button>
+    <button class="btn btn-secundair" onclick="sluitInvullenSheet()">Annuleren</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  App-status
+// ══════════════════════════════════════════
+const s = {
+    speeltijd:      null,
+    spelers:        [],
+    achterstand:    {},     // { spelernaam: minuten_tekort }
+    opVeld:         null,   // inclusief keeper
+    wisselInterval: null,   // null = automatisch
+    keeperRotatie:  null,   // 'heel' | 'half' | 'kwart'
+    keepers:        [],     // keeper per periode (array van namen)
+    tegenstander:   '',     // ingevuld in stap 1
+    laatste:        null,   // staging voor opslaan in seizoen
+};
+
+// ══════════════════════════════════════════
+//  Voortgang bijwerken
+// ══════════════════════════════════════════
+function zetVoortgang(actief) {
+    document.querySelectorAll('.p-step').forEach(el => {
+        const n = parseInt(el.dataset.s);
+        el.classList.remove('actief','klaar');
+        if (n === actief) el.classList.add('actief');
+        else if (n < actief) el.classList.add('klaar');
+    });
+}
+
+function naarStap(n) {
+    document.querySelectorAll('.stap').forEach(el => el.classList.remove('actief'));
+    const el = n === 'resultaat'
+        ? document.getElementById('stapResultaat')
+        : document.getElementById('stap' + n);
+    if (el) el.classList.add('actief');
+    zetVoortgang(typeof n === 'number' ? n : 6);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ══════════════════════════════════════════
+//  STAP 1 — Speeltijd
+// ══════════════════════════════════════════
+document.getElementById('speeltijdInvoer').addEventListener('input', function () {
+    const v = parseFloat(this.value);
+    const info = document.getElementById('speeltijdInfo');
+    const tekst = document.getElementById('speeltijdInfoTekst');
+    if (v && v >= 10 && v <= 120) {
+        info.style.display = 'block';
+        tekst.textContent =
+            `Halftijd na ${v / 2} min`;
+    } else {
+        info.style.display = 'none';
+    }
+});
+
+function naarStap2() {
+    const v = parseFloat(document.getElementById('speeltijdInvoer').value);
+    const fout = document.getElementById('speeltijdFout');
+    if (!v || v < 10 || v > 120) {
+        fout.textContent = 'Voer een speeltijd in tussen 10 en 120 minuten.';
+        return;
+    }
+    fout.textContent = '';
+    s.speeltijd    = v;
+    s.tegenstander = document.getElementById('tegStanderStapInvoer').value.trim();
+    if (s.spelers.length === 0) initSpelers();
+    naarStap(2);
+}
+
+// ══════════════════════════════════════════
+//  STAP 2 — Spelers
+// ══════════════════════════════════════════
+function initSpelers() {
+    s.spelers = Array(5).fill('');
+    renderSpelers();
+}
+
+function renderSpelers() {
+    const lijst = document.getElementById('spelerLijst');
+    lijst.innerHTML = '';
+    s.spelers.forEach((naam, i) => {
+        const rij = document.createElement('div');
+        rij.className = 'speler-rij';
+        rij.innerHTML = `
+            <div class="speler-nr">${i + 1}</div>
+            <input type="text" placeholder="Naam speler ${i + 1}"
+                   value="${escHtml(naam)}"
+                   oninput="updateSpeler(${i}, this.value)">
+            ${s.spelers.length > 5
+                ? `<button class="btn-verwijder" onclick="verwijderSpeler(${i})">×</button>`
+                : ''}`;
+        lijst.appendChild(rij);
+    });
+    document.getElementById('btnToevoegen').style.display =
+        s.spelers.length >= 16 ? 'none' : 'block';
+}
+
+function escHtml(t) {
+    return t.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateSpeler(i, v) { s.spelers[i] = v.trim(); }
+
+function spelerToevoegen() {
+    if (s.spelers.length < 16) {
+        s.spelers.push('');
+        renderSpelers();
+        const inputs = document.querySelectorAll('#spelerLijst input[type="text"]');
+        inputs[inputs.length - 1].focus();
+    }
+}
+
+function verwijderSpeler(i) {
+    s.spelers.splice(i, 1);
+    renderSpelers();
+}
+
+function naarStap3() {
+    const tekstInputs = document.querySelectorAll('#spelerLijst input[type="text"]');
+    const namen = [];
+    tekstInputs.forEach(inp => { const v = inp.value.trim(); if (v) namen.push(v); });
+
+    const fout = document.getElementById('spelersFout');
+    if (namen.length < 5) { fout.textContent = 'Voer minimaal 5 spelersnamen in.'; return; }
+    const dubbel = namen.find((n, i) => namen.indexOf(n) !== i);
+    if (dubbel) { fout.textContent = `Naam "${dubbel}" komt meerdere keren voor.`; return; }
+    fout.textContent = '';
+    s.spelers = namen;
+
+    bouwFormatKeuze();
+    naarStap(3);
+}
+
+// ══════════════════════════════════════════
+//  STAP 3 — Speelformaat
+// ══════════════════════════════════════════
+const FORMATEN = [5, 6, 7, 8, 9, 10, 11];
+
+function bouwFormatKeuze() {
+    const groep = document.getElementById('formatGroep');
+    groep.innerHTML = '';
+    FORMATEN.forEach(n => {
+        if (n > s.spelers.length) return; // niet bruikbaar als je minder spelers hebt
+        const bank = s.spelers.length - n;
+        const knop = document.createElement('button');
+        knop.className = 'format-knop' + (s.opVeld === n ? ' gekozen' : '');
+        knop.innerHTML = `${n}v${n}<span class="format-sub">${n === s.opVeld ? '✓' : ''}</span>`;
+        knop.onclick = () => kiesFormaat(n);
+        groep.appendChild(knop);
+    });
+    updateFormatInfo();
+}
+
+function kiesFormaat(n) {
+    s.opVeld = n;
+    document.querySelectorAll('.format-knop').forEach((k, i) => {
+        const val = FORMATEN.filter(f => f <= s.spelers.length)[i];
+        k.classList.toggle('gekozen', val === n);
+        k.querySelector('.format-sub').textContent = val === n ? '✓' : '';
+    });
+    updateFormatInfo();
+}
+
+function updateFormatInfo() {
+    const info = document.getElementById('formatInfo');
+    const tekst = document.getElementById('formatInfoTekst');
+    if (!s.opVeld) {
+        tekst.textContent = 'Kies een formaat hierboven.';
+        return;
+    }
+    const veld = s.opVeld - 1;
+    const bank = s.spelers.length - s.opVeld;
+    tekst.textContent =
+        `${s.opVeld} op het veld (1 keeper + ${veld} veldspelers)` +
+        (bank > 0 ? ` • ${bank} speler${bank > 1 ? 's' : ''} op de bank` : ' • geen bank');
+    info.style.display = 'block';
+}
+
+function berekenAutoInterval(opVeld, speeltijd) {
+    // Optimaal interval op basis van beschikbare spelers en bankplaatsen
+    const A = s.spelers.length - 1; // beschikbaar per periode (schatting)
+    const B = Math.max(1, s.spelers.length - opVeld);
+    const periodeMin = speeltijd / (s.keeperRotatie === 'kwart' ? 4 : s.keeperRotatie === 'half' ? 2 : 1);
+    const numW = Math.min(A / gcd(A, B), 4);
+    return Math.round((periodeMin / numW) * 10) / 10;
+}
+
+function naarStap4() {
+    const fout = document.getElementById('formatFout');
+    if (!s.opVeld) { fout.textContent = 'Kies hoeveel spelers er op het veld staan.'; return; }
+    fout.textContent = '';
+
+    // Wisselinterval ophalen
+    const wVal = parseFloat(document.getElementById('wisselIntervalInvoer').value);
+    s.wisselInterval = (wVal > 0) ? wVal : null;
+
+    // Labels bijwerken met echte tijden
+    const half = s.speeltijd / 2;
+    const kwart = s.speeltijd / 4;
+    document.getElementById('optHeel').textContent =
+        `1 keeper speelt alle ${s.speeltijd} minuten`;
+    document.getElementById('optHalf').textContent =
+        `Keeper wisselt na ${half} minuten (bij rust)`;
+    document.getElementById('optKwart').textContent =
+        `Keeper wisselt elke ${kwart} minuten`;
+
+    // Herstel selectie in UI
+    if (s.keeperRotatie) kiesKeepRotatie(s.keeperRotatie, true);
+
+    naarStap(4);
+}
+
+// ══════════════════════════════════════════
+//  STAP 4 — Keeper rotatie
+// ══════════════════════════════════════════
+function kiesKeepRotatie(waarde, stil) {
+    s.keeperRotatie = waarde;
+    document.querySelectorAll('.optie-kaart').forEach(k => k.classList.remove('gekozen'));
+    const radio = document.querySelector(`input[value="${waarde}"]`);
+    if (radio) {
+        radio.checked = true;
+        radio.closest('.optie-kaart').classList.add('gekozen');
+    }
+}
+
+function naarStap5() {
+    if (!s.keeperRotatie) {
+        document.getElementById('keeperRotatieFout').textContent =
+            'Kies een optie voor de keeper rotatie.';
+        return;
+    }
+    document.getElementById('keeperRotatieFout').textContent = '';
+
+    const periodes = getPeriodes();
+    document.getElementById('keeperSelectieUitleg').textContent =
+        `Selecteer voor elk${periodes.length > 1 ? 'e periode' : 'e wedstrijd'} wie er in het doel staat.`;
+
+    const container = document.getElementById('keeperPeriodes');
+    container.innerHTML = '';
+
+    periodes.forEach((p, i) => {
+        const sec = document.createElement('div');
+        sec.className = 'periode-sectie';
+        sec.innerHTML = `<div class="periode-titel">${p.label}</div>
+            <div class="keeper-grid" id="kGrid${i}">
+                ${s.spelers.map(naam => `
+                    <button class="keeper-knop${s.keepers[i] === naam ? ' gekozen' : ''}"
+                            data-periode="${i}" data-naam="${escHtml(naam)}"
+                            onclick="kiesKeeper(${i}, '${escHtml(naam)}', this)">
+                        ${escHtml(naam)}
+                    </button>`).join('')}
+            </div>`;
+        container.appendChild(sec);
+    });
+
+    naarStap(5);
+}
+
+function kiesKeeper(periodeIdx, naam, knop) {
+    document.querySelectorAll(`#kGrid${periodeIdx} .keeper-knop`)
+        .forEach(k => k.classList.remove('gekozen'));
+    knop.classList.add('gekozen');
+    s.keepers[periodeIdx] = naam;
+}
+
+// ══════════════════════════════════════════
+//  Helper: periodes berekenen
+// ══════════════════════════════════════════
+function getPeriodes() {
+    const t = s.speeltijd;
+    if (s.keeperRotatie === 'heel') {
+        return [{ label: `Hele wedstrijd (${t} min)`, start: 0, eind: t }];
+    }
+    if (s.keeperRotatie === 'half') {
+        const h = t / 2;
+        return [
+            { label: `1e helft  (0 – ${h} min)`,  start: 0, eind: h },
+            { label: `2e helft  (${h} – ${t} min)`, start: h, eind: t },
+        ];
+    }
+    // kwart
+    const k = t / 4;
+    return [
+        { label: `1e kwart  (0 – ${k} min)`,       start: 0,   eind: k },
+        { label: `2e kwart  (${k} – ${k*2} min)`,  start: k,   eind: k*2 },
+        { label: `3e kwart  (${k*2} – ${k*3} min)`, start: k*2, eind: k*3 },
+        { label: `4e kwart  (${k*3} – ${t} min)`,  start: k*3, eind: t },
+    ];
+}
+
+// ══════════════════════════════════════════
+//  Hulpfuncties voor eerlijke verdeling
+// ══════════════════════════════════════════
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+// Optimaal aantal sub-windows: A/gcd(A,B), max 4 voor leesbaarheid
+function optWindows(A, B) {
+    if (B <= 0) return 1;
+    return Math.min(A / gcd(A, B), 4);
+}
+
+// Formatteer minuten als "30'" of "22.5'"
+function fmtMin(m) {
+    const r = Math.round(m * 10) / 10;
+    return `${r}'`;
+}
+
+// ══════════════════════════════════════════
+//  Schema genereren
+// ══════════════════════════════════════════
+function genereerSchema() {
+    const periodes = getPeriodes();
+    const fout = document.getElementById('keeperSelectieFout');
+
+    for (let i = 0; i < periodes.length; i++) {
+        if (!s.keepers[i]) {
+            fout.textContent = `Selecteer een keeper voor: ${periodes[i].label}.`;
+            return;
+        }
+    }
+    fout.textContent = '';
+
+    const N        = s.spelers.length;
+    const veldSpots = s.opVeld - 1;
+
+    // ── Tijdtellers ──────────────────────────
+    const fieldTijd   = {};  // veldminuten (ZONDER keeperbeurt)
+    const keeperTijd  = {};
+    const lastBenched = {};  // window-index wanneer voor het laatst op de bank
+    // α: gewicht keepertijd in sorteersleutel, zodat ex-keepers eerlijk meeconcurreren
+    const alpha = veldSpots / (N - 1);
+    // Unieke startwaarden zodat eerste windows systematisch rouleren i.p.v. altijd dezelfde bank.
+    // Achterstand vorige wedstrijd wordt als negatieve veldtijd meegenomen → hogere speelprioriteit.
+    s.spelers.forEach((p, idx) => {
+        fieldTijd[p]  = 0;
+        keeperTijd[p] = 0;
+        lastBenched[p] = idx - N;
+    });
+
+    let globalW = 0; // globale window-teller over alle periodes heen
+    const planning = [];
+
+    // ── Verdeling per periode ────────────────
+    periodes.forEach((periode, pi) => {
+        const D      = periode.eind - periode.start;
+        const keeper = s.keepers[pi];
+        keeperTijd[keeper] += D;
+
+        const available = s.spelers.filter(p => p !== keeper);
+        const A = available.length;
+        const B = A - veldSpots; // bankplekken
+
+        let subWindows;
+
+        if (B <= 0) {
+            // Iedereen speelt de hele periode
+            available.forEach(p => fieldTijd[p] += D);
+            subWindows = [{ start: periode.start, eind: periode.eind,
+                            veld: [...available], bank: [] }];
+        } else {
+            const numW = s.wisselInterval
+                ? Math.max(1, Math.ceil(D / s.wisselInterval))
+                : optWindows(A, B);
+            const wDuur = D / numW;
+            subWindows = [];
+
+            // Ex-keepers (van eerdere periodes) die nog geen veldtijd hebben gekregen
+            // krijgen in het eerste sub-window voorrang: sort key → -99999.
+            // Dit garandeert dat een keeper minstens 1 wisselblok veldtijd speelt
+            // nadat zijn keeperbeurt voorbij is.
+            const mustPlay = new Set();
+            for (let prevPi = 0; prevPi < pi; prevPi++) {
+                const pk = s.keepers[prevPi];
+                if (available.includes(pk) && fieldTijd[pk] <= 0) {
+                    mustPlay.add(pk);
+                }
+            }
+
+            for (let w = 0; w < numW; w++) {
+                // Sortering:
+                //   1. Sorteersleutel = veldTijd + α×keeperTijd (ASC)
+                //      α zorgt dat ex-keepers concurreren op gelijk niveau met veldspelers
+                //   2. Bij gelijkstand: meest recent op bank (DESC) = nu spelen
+                //   3. mustPlay-spelers krijgen in window 0 sort key −99999 (altijd eerste)
+                const sorted = [...available].sort((a, b) => {
+                    const skA = (w === 0 && mustPlay.has(a)) ? -99999 : fieldTijd[a] + alpha * keeperTijd[a];
+                    const skB = (w === 0 && mustPlay.has(b)) ? -99999 : fieldTijd[b] + alpha * keeperTijd[b];
+                    const skDiff = skA - skB;
+                    if (Math.abs(skDiff) > 0.001) return skDiff; // ASC: lager = eerder spelen
+                    return lastBenched[b] - lastBenched[a]; // DESC: recent bank = nu spelen
+                });
+
+                const veld = sorted.slice(0, veldSpots);
+                const bank = sorted.slice(veldSpots);
+
+                const wStart = periode.start + w * wDuur;
+                const wEind  = (w === numW - 1) ? periode.eind
+                                                 : periode.start + (w + 1) * wDuur;
+
+                veld.forEach(p => fieldTijd[p] += wDuur);
+                bank.forEach(p => { lastBenched[p] = globalW; });
+
+                globalW++;
+                subWindows.push({ start: wStart, eind: wEind,
+                                  veld: [...veld], bank: [...bank] });
+            }
+        }
+
+        planning.push({ periode, keeper, subWindows });
+    });
+
+    // ── HTML opbouwen ────────────────────────
+    let html = '';
+
+    planning.forEach(pl => {
+        const D        = pl.periode.eind - pl.periode.start;
+        const meerdere = pl.subWindows.length > 1;
+
+        html += `<div class="schema-periode">
+            <div class="schema-kop">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span>${pl.periode.label}</span>
+                    <span class="tag tag-keeper" style="font-size:.76rem">🧤 ${escHtml(pl.keeper)}</span>
+                </div>
+                <span style="opacity:.85;font-size:.8rem;white-space:nowrap">⏱ ${fmtMin(D)}</span>
+            </div>`;
+
+        pl.subWindows.forEach((sw, wi) => {
+            if (meerdere) {
+                html += `<div class="sub-tijd-header">${fmtMin(sw.start)} – ${fmtMin(sw.eind)}</div>`;
+            }
+            html += `<div class="schema-body">
+                <div>
+                    <div class="schema-sectie-label">Op het veld</div>
+                    <div class="tag-rij">${sw.veld.map(p =>
+                        `<span class="tag tag-veld">${escHtml(p)}</span>`).join('')}</div>
+                </div>
+                ${sw.bank.length > 0 ? `<div>
+                    <div class="schema-sectie-label">Bank</div>
+                    <div class="tag-rij">${sw.bank.map(p =>
+                        `<span class="tag tag-bank">${escHtml(p)}</span>`).join('')}</div>
+                </div>` : ''}
+            </div>`;
+
+            // Wisselindicator tussen sub-windows
+            if (meerdere && wi < pl.subWindows.length - 1) {
+                const next    = pl.subWindows[wi + 1];
+                const komtIn  = next.veld.filter(p => sw.bank.includes(p));
+                const gaatUit = next.bank.filter(p => sw.veld.includes(p));
+                if (komtIn.length) {
+                    html += `<div class="wissel-lijn">
+                        <span class="wissel-badge-line">Wissel ${fmtMin(next.start)}</span>
+                        <div class="wissel-spelers">
+                            ${komtIn.map(p  => `<span class="wissel-in">↑ ${escHtml(p)}</span>`).join('')}
+                            ${gaatUit.map(p => `<span class="wissel-uit">↓ ${escHtml(p)}</span>`).join('')}
+                        </div>
+                    </div>`;
+                }
+            }
+        });
+
+        html += '</div>';
+    });
+
+    // ── Speeltijdbalken ──────────────────────
+    const totaal = {};
+    s.spelers.forEach(p => totaal[p] = fieldTijd[p] + keeperTijd[p]);
+    const maxT      = Math.max(...Object.values(totaal));
+    const gesorteerd = [...s.spelers].sort((a, b) => totaal[b] - totaal[a]);
+
+    html += `<div class="tijden-sectie"><div class="tijden-label">Speeltijd per speler</div>`;
+
+    gesorteerd.forEach(sp => {
+        const vPct = maxT > 0 ? fieldTijd[sp]  / maxT * 100 : 0;
+        const kPct = maxT > 0 ? keeperTijd[sp] / maxT * 100 : 0;
+        html += `<div class="tijdbalk-rij">
+            <div class="tijdbalk-naam" title="${escHtml(sp)}">${escHtml(sp)}</div>
+            <div class="tijdbalk-bg">
+                <div class="tijdbalk-stack">
+                    <div class="tb-veld"   style="width:${vPct}%"></div>
+                    <div class="tb-keeper" style="width:${kPct}%"></div>
+                </div>
+            </div>
+            <div class="tijdbalk-min">${Math.round(totaal[sp])}<span style="font-size:.65rem">m</span></div>
+        </div>`;
+    });
+
+    html += `</div>
+    <div class="legenda">
+        <span class="tag tag-veld"   style="font-size:.72rem">Veldspeler</span>
+        <span class="tag tag-keeper" style="font-size:.72rem">🧤 Keeperbeurt</span>
+        ${N > s.opVeld ? `<span class="tag tag-bank" style="font-size:.72rem">Bank</span>` : ''}
+    </div>`;
+
+    // Bereken daadwerkelijk gebruikte wisselinterval (eerste periode met bank als voorbeeld)
+    const voorbeeldPeriode = planning.find(pl => pl.subWindows.length > 1);
+    const gebruiktInterval = voorbeeldPeriode
+        ? Math.round((voorbeeldPeriode.subWindows[0].eind - voorbeeldPeriode.subWindows[0].start) * 10) / 10
+        : null;
+
+    document.getElementById('schemaOutput').innerHTML = html;
+    document.getElementById('resultaatSub').textContent =
+        `${N} spelers • ${s.opVeld}v${s.opVeld} • ${s.speeltijd} min` +
+        (gebruiktInterval ? ` • wissel elke ${gebruiktInterval} min` : '');
+
+    // ── Seizoen staging ──────────────────────
+    s.laatste = { speelTijd: s.speeltijd, spelersData: {} };
+    s.spelers.forEach(p => {
+        const actualV = Math.max(0, Math.round(fieldTijd[p]));
+        const actualK = Math.round(keeperTijd[p]);
+        s.laatste.spelersData[p] = { veld: actualV, keeper: actualK, totaal: actualV + actualK };
+    });
+    const btnOpslaanEl = document.getElementById('btnOpslaan');
+    if (btnOpslaanEl) btnOpslaanEl.style.display = 'block';
+
+    naarStap('resultaat');
+}
+
+// ══════════════════════════════════════════
+//  Opnieuw starten
+// ══════════════════════════════════════════
+function opnieuw() {
+    s.speeltijd     = null;
+    s.spelers       = [];
+    s.achterstand   = {};
+    s.opVeld        = null;
+    s.wisselInterval = null;
+    s.keeperRotatie = null;
+    s.keepers       = [];
+    s.tegenstander  = '';
+    s.laatste       = null;
+    document.getElementById('tegStanderStapInvoer').value = '';
+    document.getElementById('speeltijdInvoer').value = '';
+    document.getElementById('speeltijdInfo').style.display = 'none';
+    document.getElementById('wisselIntervalInvoer').value = '';
+    document.getElementById('wisselInfo').style.display = 'none';
+    document.getElementById('btnOpslaan').style.display = 'none';
+    document.getElementById('btnOpslaan').textContent = '💾 Opslaan in seizoen';
+    document.getElementById('btnOpslaan').style.opacity = '1';
+    document.getElementById('btnOpslaan').disabled = false;
+    initSpelers();
+    naarStap(1);
+}
+
+// ── Wisselinterval live feedback ──────────
+document.getElementById('wisselIntervalInvoer').addEventListener('input', function () {
+    const v = parseFloat(this.value);
+    const info  = document.getElementById('wisselInfo');
+    const tekst = document.getElementById('wisselInfoTekst');
+    if (v > 0 && s.speeltijd) {
+        const periodeMin = s.speeltijd / 2; // schatting halve wedstrijd
+        const numW = Math.ceil(periodeMin / v);
+        info.style.display = 'block';
+        tekst.textContent = `Wissels per helft: ~${numW} (elke ${v} min)`;
+    } else {
+        info.style.display = 'none';
+    }
+});
+
+// ══════════════════════════════════════════
+//  PDF / Afdrukken
+// ══════════════════════════════════════════
+function printSchema() {
+    window.print();
+}
+
+// ══════════════════════════════════════════
+//  SEIZOEN TRACKING
+// ══════════════════════════════════════════
+const LS_KEY = 'speeltijdverdeler_v1';
+
+function laadSeizoen() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
+    catch(e) { return []; }
+}
+
+function slaSeizoenOp(wedstrijden) {
+    localStorage.setItem(LS_KEY, JSON.stringify(wedstrijden));
+}
+
+// ── Tab navigatie ─────────────────────────
+function toonTab(tab) {
+    document.getElementById('schemaArea').style.display    = tab === 'schema'  ? '' : 'none';
+    document.getElementById('seizoenScherm').style.display = tab === 'seizoen' ? 'block' : 'none';
+    document.getElementById('tabSchemaKnop').classList.toggle('actief', tab === 'schema');
+    document.getElementById('tabSeizoenKnop').classList.toggle('actief', tab === 'seizoen');
+    if (tab === 'seizoen') renderSeizoen();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Bottom sheet: wedstrijd opslaan ───────
+function openOpslaanSheet() {
+    if (!s.laatste) return;
+    document.getElementById('tegStanderInvoer').value = s.tegenstander || '';
+    const container = document.getElementById('opslaanSpelers');
+    container.innerHTML = '';
+    s.spelers.forEach(p => {
+        const data = s.laatste.spelersData[p] || { veld: 0, keeper: 0, totaal: 0 };
+        const keeperBadge = data.keeper > 0
+            ? ` <span class="sheet-keeper-badge">🧤 ${data.keeper}m</span>` : '';
+        const rij = document.createElement('div');
+        rij.className = 'sheet-speler-rij';
+        rij.innerHTML = `
+            <span class="sheet-speler-naam">${escHtml(p)}${keeperBadge}</span>
+            <span style="font-size:.88rem;font-weight:700;color:var(--groen-mid);flex-shrink:0">${data.totaal} min</span>`;
+        container.appendChild(rij);
+    });
+    document.getElementById('opslaanOverlay').style.display = 'block';
+    document.getElementById('opslaanSheet').classList.add('open');
+}
+
+function sluitOpslaanSheet() {
+    document.getElementById('opslaanOverlay').style.display = 'none';
+    document.getElementById('opslaanSheet').classList.remove('open');
+}
+
+function bevestigOpslaan() {
+    if (!s.laatste) { alert('Genereer eerst een schema.'); return; }
+    try {
+        const tegenstander = document.getElementById('tegStanderInvoer').value.trim();
+        const datum = new Date().toISOString().slice(0, 10);
+
+        const spelersData = {};
+        s.spelers.forEach(p => {
+            spelersData[p] = s.laatste.spelersData[p] || { veld: 0, keeper: 0, totaal: 0 };
+        });
+
+        const wedstrijden = laadSeizoen();
+        wedstrijden.push({
+            id: Date.now(), datum,
+            tegenstander: tegenstander || null,
+            speelTijd: s.laatste.speelTijd,
+            status: 'gepland',
+            uitslag: null,
+            doelpunten: {},
+            spelersData
+        });
+        slaSeizoenOp(wedstrijden);
+
+        sluitOpslaanSheet();
+        document.getElementById('btnOpslaan').textContent = '✓ Opgeslagen als plan';
+        document.getElementById('btnOpslaan').style.opacity = '.5';
+        document.getElementById('btnOpslaan').disabled = true;
+    } catch(e) {
+        alert('Opslaan mislukt: ' + e.message);
+    }
+}
+
+// ── Seizoen dashboard renderen ────────────
+function renderSeizoen() {
+    const wedstrijden = laadSeizoen();
+    const leeg = wedstrijden.length === 0;
+
+    document.getElementById('seizoenLeeg').style.display      = leeg ? 'block' : 'none';
+    document.getElementById('wedstrijdTitel').style.display   = leeg ? 'none'  : 'block';
+    document.getElementById('btnSeizoenWissen').style.display = leeg ? 'none'  : 'block';
+
+    // Stats alleen op basis van gespeelde wedstrijden
+    const gespeeld = wedstrijden.filter(w => w.status === 'gespeeld');
+    const stats = {};
+    gespeeld.forEach(w => {
+        Object.entries(w.spelersData).forEach(([naam, data]) => {
+            if (!stats[naam]) stats[naam] = { veld: 0, keeper: 0, aanwezigheid: 0 };
+            stats[naam].veld        += data.veld;
+            stats[naam].keeper      += data.keeper;
+            stats[naam].aanwezigheid++;
+        });
+    });
+
+    const spelerNamen = Object.keys(stats).sort((a, b) => {
+        const avgA = (stats[a].veld + stats[a].keeper) / stats[a].aanwezigheid;
+        const avgB = (stats[b].veld + stats[b].keeper) / stats[b].aanwezigheid;
+        return avgB - avgA;
+    });
+    const maxAvg = spelerNamen.length > 0
+        ? Math.max(...spelerNamen.map(p => (stats[p].veld + stats[p].keeper) / stats[p].aanwezigheid))
+        : 1;
+
+    let statsHtml = '';
+    if (spelerNamen.length > 0) {
+        statsHtml = `<div class="sz-sectie-titel">Gemiddeld per gespeelde wedstrijd</div>`;
+        spelerNamen.forEach(p => {
+            const st   = stats[p];
+            const avg  = (st.veld + st.keeper) / st.aanwezigheid;
+            const vPct = maxAvg > 0 ? (st.veld   / st.aanwezigheid) / maxAvg * 100 : 0;
+            const kPct = maxAvg > 0 ? (st.keeper / st.aanwezigheid) / maxAvg * 100 : 0;
+            statsHtml += `
+            <div class="sz-rij">
+                <div class="sz-naam" title="${escHtml(p)}">${escHtml(p)}</div>
+                <div class="sz-balk-bg">
+                    <div class="sz-balk-veld"   style="width:${vPct}%"></div>
+                    <div class="sz-balk-keeper" style="width:${kPct}%"></div>
+                </div>
+                <div class="sz-gem">${Math.round(avg * 10) / 10}<span style="font-size:.65rem">m</span></div>
+                <div class="sz-aanw" title="${st.aanwezigheid}x aanwezig">${st.aanwezigheid}×</div>
+            </div>`;
+        });
+        statsHtml += `
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+            <span class="tag tag-veld" style="font-size:.7rem">Veldtijd</span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:.7rem;font-weight:700;padding:4px 10px;border-radius:20px;background:#fff3cd;color:#856404">🧤 Keeperbeurt</span>
+            <span style="font-size:.7rem;color:var(--grijs);align-self:center">× = bijgewoonde wedstrijden</span>
+        </div>`;
+    } else if (!leeg) {
+        statsHtml = `<p style="font-size:.85rem;color:var(--grijs);margin:10px 0">Statistieken verschijnen nadat een wedstrijd als gespeeld is ingevuld.</p>`;
+    }
+    document.getElementById('seizoenStats').innerHTML = statsHtml;
+
+    // ── Wedstrijdlijst ───────────────────
+    let lijstHtml = '';
+    [...wedstrijden].reverse().forEach(w => {
+        const status   = w.status || 'gespeeld'; // backwards compat
+        const titelTxt = w.tegenstander ? `${w.datum} — ${escHtml(w.tegenstander)}` : w.datum;
+        const uitslagTxt = (status === 'gespeeld' && w.uitslag)
+            ? `<strong>${w.uitslag.eigen} – ${w.uitslag.tegen}</strong> &nbsp;`  : '';
+
+        // Doelpuntenmakers
+        const doelTxt = (w.doelpunten && Object.keys(w.doelpunten).length > 0)
+            ? `<div style="font-size:.78rem;margin:6px 0 4px;color:#555">
+                ⚽ ${Object.entries(w.doelpunten)
+                    .filter(([,n]) => n > 0)
+                    .map(([nm,n]) => `${escHtml(nm)}${n > 1 ? ` (${n}×)` : ''}`)
+                    .join(', ')}
+               </div>` : '';
+
+        // Speeltijd-tags
+        const spelerTags = Object.entries(w.spelersData).map(([naam, data]) =>
+            `<span class="wd-speler-tag${data.keeper > 0 ? ' keeper' : ''}">
+                ${data.keeper > 0 ? '🧤 ' : ''}${escHtml(naam)} ${data.totaal}m
+            </span>`).join('');
+
+        const actieKnop = status === 'gepland'
+            ? `<button class="btn btn-primair" style="margin-top:10px;padding:11px"
+                onclick="openInvullenSheet(${w.id})">📝 Na wedstrijd invullen</button>`
+            : `<button class="btn btn-secundair" style="margin-top:10px;padding:10px"
+                onclick="openInvullenSheet(${w.id})">✏️ Bewerken</button>`;
+
+        lijstHtml += `
+        <details class="wedstrijd-item">
+            <summary>
+                <div>
+                    <div style="font-weight:800">${titelTxt}</div>
+                    <div style="font-size:.75rem;margin-top:2px">
+                        ${uitslagTxt}<span class="status-badge status-${status}">${status === 'gepland' ? 'Gepland' : 'Gespeeld'}</span>
+                    </div>
+                </div>
+                <button class="btn-verwijder-wedstrijd" onclick="verwijderWedstrijd(${w.id}, event)">✕</button>
+            </summary>
+            <div class="wedstrijd-detail">
+                ${doelTxt}
+                ${spelerTags}
+                ${actieKnop}
+            </div>
+        </details>`;
+    });
+    document.getElementById('wedstrijdLijst').innerHTML = lijstHtml;
+}
+
+function verwijderWedstrijd(id, evt) {
+    evt.stopPropagation();
+    const wedstrijden = laadSeizoen().filter(w => w.id !== id);
+    slaSeizoenOp(wedstrijden);
+    renderSeizoen();
+}
+
+function seizoenWissen() {
+    if (!confirm('Weet je zeker dat je alle seizoensdata wilt wissen?')) return;
+    localStorage.removeItem(LS_KEY);
+    renderSeizoen();
+}
+
+// ══════════════════════════════════════════
+//  INVULLEN NA WEDSTRIJD
+// ══════════════════════════════════════════
+let _invulId    = null;
+let _doelTellers = {};
+
+function openInvullenSheet(id) {
+    const wedstrijden = laadSeizoen();
+    const w = wedstrijden.find(x => x.id === id);
+    if (!w) return;
+    _invulId = id;
+
+    document.getElementById('invullenTitel').textContent =
+        `📝 ${w.tegenstander ? escHtml(w.tegenstander) : 'Wedstrijd'} invullen`;
+    document.getElementById('uitslagTegenNaam').textContent =
+        w.tegenstander || 'Tegenstander';
+
+    const u = w.uitslag || {};
+    document.getElementById('uitslagEigen').value = u.eigen ?? '';
+    document.getElementById('uitslagTegen').value = u.tegen ?? '';
+
+    // Doelpunten
+    const spelersLijst = Object.keys(w.spelersData);
+    const opgeslagenDoel = w.doelpunten || {};
+    _doelTellers = {};
+    spelersLijst.forEach(p => { _doelTellers[p] = opgeslagenDoel[p] || 0; });
+    renderDoelTellers(spelersLijst);
+
+    // Speelminuten
+    const container = document.getElementById('invullenSpelers');
+    container.innerHTML = '';
+    spelersLijst.forEach((p, i) => {
+        const data = w.spelersData[p];
+        const keeperBadge = data.keeper > 0
+            ? ` <span class="sheet-keeper-badge">🧤 ${data.keeper}m</span>` : '';
+        const aanwezig = data.totaal > 0;
+        const rij = document.createElement('div');
+        rij.className = 'sheet-speler-rij';
+        rij.innerHTML = `
+            <input type="checkbox" data-iidx="${i}" ${aanwezig ? 'checked' : ''}
+                   onchange="toggleInvulAanw(${i})">
+            <span class="sheet-speler-naam">${escHtml(p)}${keeperBadge}</span>
+            <div class="sheet-min-wrap" id="iminWrap${i}" style="opacity:${aanwezig ? 1 : .3}">
+                <input type="number" class="sheet-min-inp" id="iminInp${i}"
+                       value="${data.totaal}" min="0" max="${w.speelTijd}"
+                       inputmode="numeric" ${aanwezig ? '' : 'disabled'}>
+                <span class="sheet-min-label">min</span>
+            </div>`;
+        container.appendChild(rij);
+    });
+
+    document.getElementById('invullenOverlay').style.display = 'block';
+    document.getElementById('invullenSheet').classList.add('open');
+    document.getElementById('invullenSheet').scrollTop = 0;
+}
+
+function renderDoelTellers(spelersLijst) {
+    const container = document.getElementById('invullenDoelen');
+    container.innerHTML = '';
+    spelersLijst.forEach(p => {
+        const n = _doelTellers[p] || 0;
+        const rij = document.createElement('div');
+        rij.className = 'doel-rij';
+        rij.id = `doelRij-${p}`;
+        rij.innerHTML = `
+            <span class="doel-naam">${escHtml(p)}</span>
+            <div class="doel-teller">
+                <button class="doel-btn doel-btn-min" onclick="wijzigDoel('${escHtml(p)}', -1)">−</button>
+                <span class="doel-num" id="doelNum-${escHtml(p)}">${n}</span>
+                <button class="doel-btn doel-btn-plus" onclick="wijzigDoel('${escHtml(p)}', 1)">+</button>
+            </div>`;
+        container.appendChild(rij);
+    });
+}
+
+function wijzigDoel(naam, delta) {
+    _doelTellers[naam] = Math.max(0, (_doelTellers[naam] || 0) + delta);
+    const el = document.getElementById(`doelNum-${naam}`);
+    if (el) el.textContent = _doelTellers[naam];
+}
+
+function toggleInvulAanw(i) {
+    const cb   = document.querySelector(`[data-iidx="${i}"]`);
+    const wrap = document.getElementById(`iminWrap${i}`);
+    if (!wrap) return;
+    wrap.style.opacity = cb.checked ? '1' : '.3';
+    wrap.querySelector('input').disabled = !cb.checked;
+}
+
+function sluitInvullenSheet() {
+    document.getElementById('invullenOverlay').style.display = 'none';
+    document.getElementById('invullenSheet').classList.remove('open');
+    _invulId = null;
+}
+
+function slaInvullenOp() {
+    if (!_invulId) return;
+    const wedstrijden = laadSeizoen();
+    const idx = wedstrijden.findIndex(x => x.id === _invulId);
+    if (idx === -1) return;
+    const w = wedstrijden[idx];
+
+    // Uitslag
+    const eigen = parseInt(document.getElementById('uitslagEigen').value);
+    const tegen = parseInt(document.getElementById('uitslagTegen').value);
+    w.uitslag = (!isNaN(eigen) && !isNaN(tegen))
+        ? { eigen, tegen } : null;
+
+    // Doelpunten
+    w.doelpunten = {};
+    Object.entries(_doelTellers).forEach(([p, n]) => { if (n > 0) w.doelpunten[p] = n; });
+
+    // Gespeelde minuten
+    const spelersLijst = Object.keys(w.spelersData);
+    const nieuwSpelersData = {};
+    spelersLijst.forEach((p, i) => {
+        const cb  = document.querySelector(`[data-iidx="${i}"]`);
+        if (!cb || !cb.checked) return; // afwezig = niet opslaan
+        const inp      = document.getElementById(`iminInp${i}`);
+        const gespeeld = Math.max(0, parseFloat(inp?.value) || 0);
+        const orig     = w.spelersData[p];
+        const keeper   = Math.min(orig.keeper, gespeeld);
+        nieuwSpelersData[p] = { veld: Math.max(0, gespeeld - keeper), keeper, totaal: gespeeld };
+    });
+    w.spelersData = nieuwSpelersData;
+    w.status = 'gespeeld';
+
+    wedstrijden[idx] = w;
+    slaSeizoenOp(wedstrijden);
+    sluitInvullenSheet();
+    renderSeizoen();
+}
+
+// ══════════════════════════════════════════
+//  Initialisatie
+// ══════════════════════════════════════════
+initSpelers();
+</script>
+</body>
+</html>
