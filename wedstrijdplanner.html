@@ -535,6 +535,12 @@
         <div class="auth-info" id="authInfo"></div>
 
         <button class="btn btn-primair" id="authKnop" onclick="authActie()">Inloggen</button>
+        <div id="vergtenLink" style="text-align:center;margin-top:12px">
+            <button onclick="wisselAuthTab('vergeten')"
+                    style="background:none;border:none;color:var(--groen-mid);font-size:.85rem;font-weight:700;cursor:pointer;text-decoration:underline">
+                Wachtwoord vergeten?
+            </button>
+        </div>
     </div>
 </div>
 
@@ -767,33 +773,70 @@ let currentUser = null;
 // ══════════════════════════════════════════
 //  Authenticatie
 // ══════════════════════════════════════════
-let _authModus = 'inloggen'; // 'inloggen' | 'registreren'
+let _authModus = 'inloggen';
 
 function wisselAuthTab(modus) {
     _authModus = modus;
     document.getElementById('tabInloggen').classList.toggle('actief', modus === 'inloggen');
     document.getElementById('tabRegistreren').classList.toggle('actief', modus === 'registreren');
-    document.getElementById('authKnop').textContent = modus === 'inloggen' ? 'Inloggen' : 'Account aanmaken';
     document.getElementById('authFout').textContent = '';
     document.getElementById('authInfo').style.display = 'none';
+
+    const wachtwoordVeld = document.getElementById('authWachtwoord');
+    const vergtenLink    = document.getElementById('vergtenLink');
+
+    if (modus === 'vergeten') {
+        document.getElementById('authKnop').textContent = 'Resetlink versturen';
+        wachtwoordVeld.style.display = 'none';
+        vergtenLink.innerHTML = `<button onclick="wisselAuthTab('inloggen')"
+            style="background:none;border:none;color:var(--groen-mid);font-size:.85rem;font-weight:700;cursor:pointer;text-decoration:underline">
+            ← Terug naar inloggen</button>`;
+    } else {
+        document.getElementById('authKnop').textContent = modus === 'inloggen' ? 'Inloggen' : 'Account aanmaken';
+        wachtwoordVeld.style.display = '';
+        vergtenLink.innerHTML = modus === 'inloggen'
+            ? `<button onclick="wisselAuthTab('vergeten')"
+                style="background:none;border:none;color:var(--groen-mid);font-size:.85rem;font-weight:700;cursor:pointer;text-decoration:underline">
+                Wachtwoord vergeten?</button>`
+            : '';
+    }
 }
 
 async function authActie() {
-    const email     = document.getElementById('authEmail').value.trim();
+    const email      = document.getElementById('authEmail').value.trim();
     const wachtwoord = document.getElementById('authWachtwoord').value;
-    const fout      = document.getElementById('authFout');
-    const info      = document.getElementById('authInfo');
+    const fout       = document.getElementById('authFout');
+    const info       = document.getElementById('authInfo');
     fout.textContent = '';
     info.style.display = 'none';
 
-    if (!email || !wachtwoord) {
-        fout.textContent = 'Vul je e-mailadres en wachtwoord in.';
-        return;
+    if (_authModus === 'vergeten') {
+        if (!email) { fout.textContent = 'Vul je e-mailadres in.'; return; }
+    } else {
+        if (!email || !wachtwoord) {
+            fout.textContent = 'Vul je e-mailadres en wachtwoord in.';
+            return;
+        }
     }
 
     const knop = document.getElementById('authKnop');
     knop.disabled = true;
     knop.textContent = '⏳ Even wachten…';
+
+    if (_authModus === 'vergeten') {
+        const { error } = await db.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.href
+        });
+        knop.disabled = false;
+        knop.textContent = 'Resetlink versturen';
+        if (error) {
+            fout.textContent = 'Versturen mislukt: ' + error.message;
+        } else {
+            info.textContent = '✅ Resetlink verstuurd! Controleer je e-mail.';
+            info.style.display = 'block';
+        }
+        return;
+    }
 
     if (_authModus === 'inloggen') {
         const { data, error } = await db.auth.signInWithPassword({ email, password: wachtwoord });
@@ -813,7 +856,6 @@ async function authActie() {
             knop.textContent = 'Account aanmaken';
             return;
         }
-        // Direct inloggen na registratie (email bevestiging uitgeschakeld)
         if (data.session) {
             currentUser = data.user;
             toonApp();
@@ -838,7 +880,6 @@ function toonLoginScherm() {
     document.getElementById('seizoenScherm').style.display = 'none';
     document.getElementById('tabBar').style.display        = 'none';
     document.getElementById('userBar').style.display       = 'none';
-    // Reset auth formulier
     document.getElementById('authFout').textContent = '';
     document.getElementById('authInfo').style.display = 'none';
     document.getElementById('authKnop').disabled = false;
@@ -1212,8 +1253,8 @@ function genereerSchema() {
             </div>`;
 
             if (meerdere && wi < pl.subWindows.length - 1) {
-                const next   = pl.subWindows[wi + 1];
-                const komtIn = next.veld.filter(p => sw.bank.includes(p));
+                const next    = pl.subWindows[wi + 1];
+                const komtIn  = next.veld.filter(p => sw.bank.includes(p));
                 const gaatUit = next.bank.filter(p => sw.veld.includes(p));
                 if (komtIn.length) {
                     html += `<div class="wissel-lijn">
@@ -1330,14 +1371,14 @@ function printSchema() { window.print(); }
 // ══════════════════════════════════════════
 function dbNaarWedstrijd(w) {
     return {
-        id:          w.id,
-        datum:       w.datum,
+        id:           w.id,
+        datum:        w.datum,
         tegenstander: w.tegenstander,
-        speelTijd:   w.speel_tijd,
-        status:      w.status,
-        uitslag:     w.uitslag,
-        doelpunten:  w.doelpunten  || {},
-        spelersData: w.spelers_data || {},
+        speelTijd:    w.speel_tijd,
+        status:       w.status,
+        uitslag:      w.uitslag,
+        doelpunten:   w.doelpunten  || {},
+        spelersData:  w.spelers_data || {},
     };
 }
 
@@ -1557,8 +1598,8 @@ async function openInvullenSheet(id) {
     document.getElementById('uitslagEigen').value = u.eigen ?? '';
     document.getElementById('uitslagTegen').value = u.tegen ?? '';
 
-    const spelersLijst     = Object.keys(w.spelersData);
-    const opgeslagenDoel   = w.doelpunten || {};
+    const spelersLijst   = Object.keys(w.spelersData);
+    const opgeslagenDoel = w.doelpunten || {};
     _doelTellers = {};
     spelersLijst.forEach(p => { _doelTellers[p] = opgeslagenDoel[p] || 0; });
     renderDoelTellers(spelersLijst);
@@ -1636,14 +1677,14 @@ async function slaInvullenOp() {
     if (loadError || !wData) return;
     const w = dbNaarWedstrijd(wData);
 
-    const eigen  = parseInt(document.getElementById('uitslagEigen').value);
-    const tegen  = parseInt(document.getElementById('uitslagTegen').value);
+    const eigen   = parseInt(document.getElementById('uitslagEigen').value);
+    const tegen   = parseInt(document.getElementById('uitslagTegen').value);
     const uitslag = (!isNaN(eigen) && !isNaN(tegen)) ? { eigen, tegen } : null;
 
     const doelpunten = {};
     Object.entries(_doelTellers).forEach(([p, n]) => { if (n > 0) doelpunten[p] = n; });
 
-    const spelersLijst    = Object.keys(w.spelersData);
+    const spelersLijst     = Object.keys(w.spelersData);
     const nieuwSpelersData = {};
     spelersLijst.forEach((p, i) => {
         const cb = document.querySelector(`[data-iidx="${i}"]`);
