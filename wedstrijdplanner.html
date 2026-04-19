@@ -369,7 +369,7 @@
     </div>
 </div>
 
-<!-- ══════════════ RESET WACHTWOORD SCHERM ══════════════ -->
+<!-- RESET WACHTWOORD SCHERM -->
 <div id="resetScherm" style="display:none; padding-top:50px">
     <div class="kaart">
         <div class="stap-label">Wachtwoord herstellen</div>
@@ -385,7 +385,7 @@
     </div>
 </div>
 
-<!-- ══════════════ LOGIN SCHERM ══════════════ -->
+<!-- LOGIN SCHERM -->
 <div id="loginScherm">
     <div class="kaart">
         <div class="stap-label">Welkom</div>
@@ -411,7 +411,7 @@
     </div>
 </div>
 
-<!-- ══════════════ SCHEMA AREA ══════════════ -->
+<!-- SCHEMA AREA -->
 <div id="schemaArea" style="display:none">
 <div class="progress-wrap" id="progressWrap">
     <div class="p-step actief" data-s="1"></div>
@@ -421,7 +421,6 @@
     <div class="p-step" data-s="5"></div>
 </div>
 
-<!-- STAP 1 -->
 <div class="stap actief" id="stap1">
     <div class="kaart">
         <div class="stap-label">Stap 1 van 5</div>
@@ -438,7 +437,6 @@
     </div>
 </div>
 
-<!-- STAP 2 -->
 <div class="stap" id="stap2">
     <div class="kaart">
         <div class="stap-label">Stap 2 van 5</div>
@@ -452,7 +450,6 @@
     </div>
 </div>
 
-<!-- STAP 3 -->
 <div class="stap" id="stap3">
     <div class="kaart">
         <div class="stap-label">Stap 3 van 5</div>
@@ -477,13 +474,12 @@
     </div>
 </div>
 
-<!-- STAP 4 -->
 <div class="stap" id="stap4">
     <div class="kaart">
         <div class="stap-label">Stap 4 van 5</div>
         <h2>Keeper rotatie</h2>
         <p>Hoe lang speelt de keeper per beurt in het doel?</p>
-        <div class="optie-groep" id="keeperRotatieGroep">
+        <div class="optie-groep">
             <label class="optie-kaart" onclick="kiesKeepRotatie('heel')">
                 <input type="radio" name="keeperRotatie" value="heel">
                 <div class="optie-tekst"><strong>Hele wedstrijd</strong><span id="optHeel">1 keeper speelt de volledige wedstrijd</span></div>
@@ -503,7 +499,6 @@
     </div>
 </div>
 
-<!-- STAP 5 -->
 <div class="stap" id="stap5">
     <div class="kaart">
         <div class="stap-label">Stap 5 van 5</div>
@@ -516,7 +511,6 @@
     </div>
 </div>
 
-<!-- RESULTAAT -->
 <div class="stap" id="stapResultaat">
     <div class="kaart">
         <div class="stap-label">Resultaat</div>
@@ -528,7 +522,7 @@
         <button class="btn btn-primair btn-opslaan" id="btnOpslaan" onclick="openOpslaanSheet()" style="display:none">💾 Opslaan in seizoen</button>
     </div>
 </div>
-</div><!-- #schemaArea -->
+</div>
 
 <!-- SEIZOEN SCHERM -->
 <div id="seizoenScherm">
@@ -598,9 +592,6 @@ const SUPABASE_KEY = 'sb_publishable__Ig1lMzVAvrsSRDrVPitng_nv26uuy9';
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 
-// ══════════════════════════════════════════
-//  Authenticatie
-// ══════════════════════════════════════════
 let _authModus = 'inloggen';
 
 function wisselAuthTab(modus) {
@@ -633,8 +624,7 @@ async function authActie() {
     const wachtwoord = document.getElementById('authWachtwoord').value;
     const fout       = document.getElementById('authFout');
     const info       = document.getElementById('authInfo');
-    fout.textContent = '';
-    info.style.display = 'none';
+    fout.textContent = ''; info.style.display = 'none';
 
     if (_authModus === 'vergeten') {
         if (!email) { fout.textContent = 'Vul je e-mailadres in.'; return; }
@@ -643,13 +633,11 @@ async function authActie() {
     }
 
     const knop = document.getElementById('authKnop');
-    knop.disabled = true;
-    knop.textContent = '⏳ Even wachten…';
+    knop.disabled = true; knop.textContent = '⏳ Even wachten…';
 
     if (_authModus === 'vergeten') {
         const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
-        knop.disabled = false;
-        knop.textContent = 'Resetlink versturen';
+        knop.disabled = false; knop.textContent = 'Resetlink versturen';
         if (error) { fout.textContent = 'Versturen mislukt: ' + error.message; }
         else { info.textContent = '✅ Resetlink verstuurd! Controleer je e-mail.'; info.style.display = 'block'; }
         return;
@@ -729,6 +717,7 @@ function toonLoginScherm() {
 
 function toonApp() {
     document.getElementById('loginScherm').style.display   = 'none';
+    document.getElementById('resetScherm').style.display   = 'none';
     document.getElementById('schemaArea').style.display    = '';
     document.getElementById('tabBar').style.display        = 'flex';
     document.getElementById('userBar').style.display       = 'flex';
@@ -736,9 +725,6 @@ function toonApp() {
     initSpelers();
 }
 
-// ══════════════════════════════════════════
-//  App-status
-// ══════════════════════════════════════════
 const s = {
     speeltijd: null, spelers: [], opVeld: null, wisselInterval: null,
     keeperRotatie: null, keepers: [], tegenstander: '', laatste: null,
@@ -761,9 +747,6 @@ function naarStap(n) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ══════════════════════════════════════════
-//  STAP 1
-// ══════════════════════════════════════════
 document.getElementById('speeltijdInvoer').addEventListener('input', function () {
     const v = parseFloat(this.value);
     const info = document.getElementById('speeltijdInfo');
@@ -782,9 +765,6 @@ function naarStap2() {
     naarStap(2);
 }
 
-// ══════════════════════════════════════════
-//  STAP 2
-// ══════════════════════════════════════════
 function initSpelers() { s.spelers = Array(5).fill(''); renderSpelers(); }
 
 function renderSpelers() {
@@ -824,9 +804,6 @@ function naarStap3() {
     fout.textContent = ''; s.spelers = namen; bouwFormatKeuze(); naarStap(3);
 }
 
-// ══════════════════════════════════════════
-//  STAP 3
-// ══════════════════════════════════════════
 const FORMATEN = [5, 6, 7, 8, 9, 10, 11];
 
 function bouwFormatKeuze() {
@@ -876,9 +853,6 @@ function naarStap4() {
     naarStap(4);
 }
 
-// ══════════════════════════════════════════
-//  STAP 4
-// ══════════════════════════════════════════
 function kiesKeepRotatie(waarde, stil) {
     s.keeperRotatie = waarde;
     document.querySelectorAll('.optie-kaart').forEach(k => k.classList.remove('gekozen'));
@@ -916,22 +890,19 @@ function kiesKeeper(periodeIdx, naam, knop) {
     s.keepers[periodeIdx] = naam;
 }
 
-// ══════════════════════════════════════════
-//  Periodes
-// ══════════════════════════════════════════
 function getPeriodes() {
     const t = s.speeltijd;
     if (s.keeperRotatie === 'heel') return [{ label: `Hele wedstrijd (${t} min)`, start: 0, eind: t }];
     if (s.keeperRotatie === 'half') {
         const h = t / 2;
-        return [{ label: `1e helft  (0 – ${h} min)`, start: 0, eind: h }, { label: `2e helft  (${h} – ${t} min)`, start: h, eind: t }];
+        return [{ label: `1e helft (0 – ${h} min)`, start: 0, eind: h }, { label: `2e helft (${h} – ${t} min)`, start: h, eind: t }];
     }
     const k = t / 4;
     return [
-        { label: `1e kwart  (0 – ${k} min)`,        start: 0,   eind: k   },
-        { label: `2e kwart  (${k} – ${k*2} min)`,   start: k,   eind: k*2 },
-        { label: `3e kwart  (${k*2} – ${k*3} min)`, start: k*2, eind: k*3 },
-        { label: `4e kwart  (${k*3} – ${t} min)`,   start: k*3, eind: t   },
+        { label: `1e kwart (0 – ${k} min)`,        start: 0,   eind: k   },
+        { label: `2e kwart (${k} – ${k*2} min)`,   start: k,   eind: k*2 },
+        { label: `3e kwart (${k*2} – ${k*3} min)`, start: k*2, eind: k*3 },
+        { label: `4e kwart (${k*3} – ${t} min)`,   start: k*3, eind: t   },
     ];
 }
 
@@ -939,9 +910,6 @@ function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 function optWindows(A, B) { if (B <= 0) return 1; return Math.min(A / gcd(A, B), 4); }
 function fmtMin(m) { return `${Math.round(m * 10) / 10}'`; }
 
-// ══════════════════════════════════════════
-//  Schema genereren
-// ══════════════════════════════════════════
 function genereerSchema() {
     const periodes = getPeriodes();
     const fout = document.getElementById('keeperSelectieFout');
@@ -987,8 +955,7 @@ function genereerSchema() {
                     if (Math.abs(d) > 0.001) return d;
                     return lastBenched[b] - lastBenched[a];
                 });
-                const veld   = sorted.slice(0, veldSpots);
-                const bank   = sorted.slice(veldSpots);
+                const veld = sorted.slice(0, veldSpots), bank = sorted.slice(veldSpots);
                 const wStart = periode.start + w * wDuur;
                 const wEind  = (w === numW - 1) ? periode.eind : periode.start + (w + 1) * wDuur;
                 veld.forEach(p => fieldTijd[p] += wDuur);
@@ -1099,9 +1066,6 @@ document.getElementById('wisselIntervalInvoer').addEventListener('input', functi
 
 function printSchema() { window.print(); }
 
-// ══════════════════════════════════════════
-//  Seizoen data (Supabase)
-// ══════════════════════════════════════════
 function dbNaarWedstrijd(w) {
     return { id: w.id, datum: w.datum, tegenstander: w.tegenstander, speelTijd: w.speel_tijd,
              status: w.status, uitslag: w.uitslag, doelpunten: w.doelpunten || {}, spelersData: w.spelers_data || {} };
@@ -1184,9 +1148,8 @@ async function renderSeizoen() {
         });
     });
 
-    const spelerNamen = Object.keys(stats).sort((a, b) => {
-        return ((stats[b].veld + stats[b].keeper) / stats[b].aanwezigheid) - ((stats[a].veld + stats[a].keeper) / stats[a].aanwezigheid);
-    });
+    const spelerNamen = Object.keys(stats).sort((a, b) =>
+        ((stats[b].veld + stats[b].keeper) / stats[b].aanwezigheid) - ((stats[a].veld + stats[a].keeper) / stats[a].aanwezigheid));
     const maxAvg = spelerNamen.length > 0 ? Math.max(...spelerNamen.map(p => (stats[p].veld + stats[p].keeper) / stats[p].aanwezigheid)) : 1;
 
     let statsHtml = '';
@@ -1194,7 +1157,7 @@ async function renderSeizoen() {
         statsHtml = `<div class="sz-sectie-titel">Gemiddeld per gespeelde wedstrijd</div>`;
         spelerNamen.forEach(p => {
             const st = stats[p], avg = (st.veld + st.keeper) / st.aanwezigheid;
-            const vPct = maxAvg > 0 ? (st.veld   / st.aanwezigheid) / maxAvg * 100 : 0;
+            const vPct = maxAvg > 0 ? (st.veld / st.aanwezigheid) / maxAvg * 100 : 0;
             const kPct = maxAvg > 0 ? (st.keeper / st.aanwezigheid) / maxAvg * 100 : 0;
             statsHtml += `<div class="sz-rij">
                 <div class="sz-naam" title="${escHtml(p)}">${escHtml(p)}</div>
@@ -1220,8 +1183,7 @@ async function renderSeizoen() {
     [...wedstrijden].reverse().forEach(w => {
         const status   = w.status || 'gespeeld';
         const titelTxt = w.tegenstander ? `${w.datum} — ${escHtml(w.tegenstander)}` : w.datum;
-        const uitslagTxt = (status === 'gespeeld' && w.uitslag)
-            ? `<strong>${w.uitslag.eigen} – ${w.uitslag.tegen}</strong> &nbsp;` : '';
+        const uitslagTxt = (status === 'gespeeld' && w.uitslag) ? `<strong>${w.uitslag.eigen} – ${w.uitslag.tegen}</strong> &nbsp;` : '';
         const doelTxt = (w.doelpunten && Object.keys(w.doelpunten).length > 0)
             ? `<div style="font-size:.78rem;margin:6px 0 4px;color:#555">⚽ ${Object.entries(w.doelpunten).filter(([,n]) => n > 0)
                 .map(([nm,n]) => `${escHtml(nm)}${n > 1 ? ` (${n}×)` : ''}`).join(', ')}</div>` : '';
@@ -1256,9 +1218,6 @@ async function seizoenWissen() {
     await renderSeizoen();
 }
 
-// ══════════════════════════════════════════
-//  Invullen na wedstrijd
-// ══════════════════════════════════════════
 let _invulId = null, _doelTellers = {};
 
 async function openInvullenSheet(id) {
@@ -1367,6 +1326,11 @@ async function slaInvullenOp() {
 //  Initialisatie
 // ══════════════════════════════════════════
 async function init() {
+    // Als de URL een wachtwoord-reset token bevat, direct het resetscherm tonen
+    if (window.location.hash.includes('type=recovery')) {
+        toonResetScherm();
+        return;
+    }
     const { data: { session } } = await db.auth.getSession();
     if (session) { currentUser = session.user; toonApp(); }
     else { toonLoginScherm(); }
@@ -1374,6 +1338,7 @@ async function init() {
 
 db.auth.onAuthStateChange((event, session) => {
     if (event === 'PASSWORD_RECOVERY') {
+        if (session) currentUser = session.user;
         toonResetScherm();
     } else if (event === 'SIGNED_IN' && session) {
         currentUser = session.user;
